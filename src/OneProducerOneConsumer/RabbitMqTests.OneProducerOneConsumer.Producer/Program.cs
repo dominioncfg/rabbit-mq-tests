@@ -11,6 +11,7 @@ async Task SendMessages()
     var factory = new ConnectionFactory() { HostName = HostName };
     using var connection = factory.CreateConnection();
     using var channel = connection.CreateModel();
+    channel.ConfirmSelect();
     channel.QueueDeclare(queue: QueueName,
                          durable: true,
                          exclusive: false,
@@ -34,6 +35,7 @@ async Task SendMessages()
                              routingKey: QueueName,
                              body: body,
                              basicProperties: properties);
+        channel.WaitForConfirmsOrDie(new TimeSpan(0, 0, 5));
         Console.WriteLine(" [x] Sent {0}", message);
 
         var delay = (new Random()).Next(10, 100);
