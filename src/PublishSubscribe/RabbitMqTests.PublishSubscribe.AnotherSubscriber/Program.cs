@@ -4,26 +4,35 @@ using RabbitMqTests.Contracts;
 using System.Text;
 using System.Text.Json;
 
-Console.Title = "Consumer";
-Console.WriteLine("*****Welcome to the Consumer*****");
+Console.Title = "Another Subscriber";
+Console.WriteLine("*****Welcome to the Another Subscriber*****");
 const string HostName = "localhost";
-const string QueueName = "OneToOne";
+const string ExchangeName = "PublishSubscribeExchange";
+const string QueueName = "SecondSubscriberQueue";
+
 var factory = new ConnectionFactory() { HostName = HostName };
 using var connection = factory.CreateConnection();
 using var channel = connection.CreateModel();
-channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+
+channel.ExchangeDeclare(exchange: ExchangeName, type: ExchangeType.Fanout, durable: true);
+
 channel.QueueDeclare(queue: QueueName,
-                     durable: true,
-                     exclusive: false,
-                     autoDelete: false,
-                     arguments: null);
+                         durable: true,
+                         exclusive: false,
+                         autoDelete: false,
+                         arguments: null);
+channel.QueueBind(queue: QueueName,
+                  exchange: ExchangeName,
+                  routingKey: string.Empty);
+
+Console.WriteLine(" [*] Waiting for messages.");
 
 var consumer = new EventingBasicConsumer(channel);
 consumer.Received += async (model, ea) =>
 {
     var body = ea.Body.ToArray();
     var message = Encoding.UTF8.GetString(body);
-    var @event = Deserialize<ResizeEmployeeImageCommand>(message);
+    var @event = Deserialize<EmployeeCreatedEvent>(message);
     EmployeeCreatedEventReceived(@event);
     channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 
@@ -33,10 +42,12 @@ consumer.Received += async (model, ea) =>
 channel.BasicConsume(queue: QueueName,
                      autoAck: false,
                      consumer: consumer);
+
 Console.WriteLine(" Press [enter] to exit.");
 Console.ReadLine();
 
-void EmployeeCreatedEventReceived(ResizeEmployeeImageCommand @event)
+
+void EmployeeCreatedEventReceived(EmployeeCreatedEvent @event)
 {
     Console.WriteLine(" [x] Received {0}", @event);
 }
