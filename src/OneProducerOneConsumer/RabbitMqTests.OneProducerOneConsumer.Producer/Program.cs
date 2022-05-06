@@ -30,6 +30,7 @@ async Task SendMessages()
         var body = Serialize(message);
 
         var properties = channel.CreateBasicProperties();
+        properties.ContentType = "application/json";
         properties.Persistent = true;
         channel.BasicPublish(exchange: "",
                              routingKey: QueueName,
